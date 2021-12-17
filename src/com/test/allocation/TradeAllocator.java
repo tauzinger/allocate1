@@ -33,6 +33,17 @@ public class TradeAllocator {
         TradeAllocator allocator = new TradeAllocator(tradesFile, capitalFile, holdingsFile, targetsFile, allocationsFile);
         allocator.readSheets();
         allocator.overview();
+        allocator.allInPosition();
+    }
+
+    private void allInPosition() {
+        tradeList.stream().forEach(tr -> {
+            final double allInPosition = tr.quantity+
+            holdingList.stream().
+                    filter(f-> tr.stock.equals(f.stock)).
+                    mapToDouble(h-> h.quantity).sum();
+            System.out.println("allInPosition " + tr.stock + " " + allInPosition);
+        });
     }
 
     private void overview() {
@@ -41,15 +52,14 @@ public class TradeAllocator {
             tradeList.stream().forEach(tr-> {
                 targetList.stream().filter(tg -> tg.account.equals(c.account) &&
                         tg.stock.equals(tr.stock)).forEach(tg-> {
-                            double max = c.capital * 0.01 * tg.targetPercent;
-                    System.out.println(c.account + " " + tr.stock + " " + tg.targetPercent + " " + max);
-                    final double maxShares = max / tr.price;
+                            double targetMarketValue = c.capital * 0.01 * tg.targetPercent;
+                    System.out.println(c.account + " " + tr.stock + " " + tg.targetPercent + " targetMarketValue " + targetMarketValue);
+                    final double maxShares = targetMarketValue / tr.price;
                     System.out.println("maxShares "+maxShares);
                     holdingList.stream().filter(hl -> hl.account.equals(c.account) &&
                             hl.stock.equals(tr.stock)).forEach(hl -> {
                         double additional = maxShares - hl.quantity;
                         System.out.println("additional "+additional);
-
 
 
                     });
