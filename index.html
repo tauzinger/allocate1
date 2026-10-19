@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hum Catcher</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hum Catcher">
+<meta name="theme-color" content="#141a1f">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f5f4f0;
+  --ink:#1c2430;
+  --muted:#6b7482;
+  --ring-track:#dcdad2;
+  --ring-fill:#2f6f5e;
+  --accent:#2f6f5e;
+  --alarm:#c2452d;
+  --card:#ffffff;
+  --btn-ink:#f5f4f0;
+  --vu-bg:#dcdad2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141a1f; --ink:#e8e6df; --muted:#8a93a0; --ring-track:#2a323a;
+    --ring-fill:#4fa88d; --accent:#4fa88d; --alarm:#e0684c; --card:#1c242b;
+    --btn-ink:#10151a; --vu-bg:#2a323a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141a1f; --ink:#e8e6df; --muted:#8a93a0; --ring-track:#2a323a;
+  --ring-fill:#4fa88d; --accent:#4fa88d; --alarm:#e0684c; --card:#1c242b;
+  --btn-ink:#10151a; --vu-bg:#2a323a;
+}
+html{height:100%}
+body{
+  margin:0;height:100%;
+  background:var(--bg);color:var(--ink);
+  font-family:"Sora",-apple-system,"Helvetica Neue",Arial,sans-serif;
+  display:flex;flex-direction:column;align-items:center;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .2s;
+}
+main{
+  width:100%;max-width:420px;padding:1rem 1.25rem 2rem;
+  display:flex;flex-direction:column;align-items:center;gap:1rem;
+  flex:1;justify-content:center;
+}
+h1{font-size:1.25rem;font-weight:700;margin:0;letter-spacing:-0.02em}
+p.sub{margin:0;color:var(--muted);font-size:0.84rem;text-align:center;line-height:1.5;max-width:34ch}
+p.sub.err{color:var(--alarm);font-weight:600}
+.ringwrap{position:relative;width:min(58vw,230px);aspect-ratio:1}
+svg.ring{width:100%;height:100%;transform:rotate(-90deg)}
+.track{stroke:var(--ring-track)}
+.fill{stroke:var(--ring-fill);transition:stroke .3s}
+.center{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:.25rem;text-align:center;
+}
+.center .big{font-size:2.3rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.03em}
+.center .state{font-size:.78rem;color:var(--muted);min-height:1.2em}
+.vuwrap{width:min(58vw,230px)}
+.vulabel{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-bottom:.25rem}
+.vu{height:10px;border-radius:5px;background:var(--vu-bg);overflow:hidden}
+.vu > div{height:100%;width:0%;background:var(--muted);border-radius:5px}
+.vu > div.hot{background:var(--accent)}
+button.primary{
+  font-family:inherit;font-size:1.05rem;font-weight:600;
+  border:none;border-radius:999px;padding:.95rem 2.4rem;
+  background:var(--accent);color:var(--btn-ink);cursor:pointer;
+}
+button.primary:focus-visible{outline:3px solid var(--ring-fill);outline-offset:3px}
+button.primary:active{transform:scale(.97)}
+button.ghost{
+  font-family:inherit;font-size:.8rem;font-weight:600;border-radius:999px;
+  border:1.5px solid var(--ring-track);background:transparent;color:var(--muted);
+  padding:.45rem 1.1rem;cursor:pointer;
+}
+.row{display:flex;gap:1.5rem;align-items:baseline;color:var(--muted);font-size:.82rem}
+.row b{color:var(--ink);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.sens{width:100%;background:var(--card);border-radius:14px;padding:.85rem 1rem .65rem}
+.sens label{font-size:.78rem;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:.35rem}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.note{font-size:.72rem;color:var(--muted);text-align:center;line-height:1.5;margin:0}
+body.alarming{background:var(--alarm)}
+body.alarming .track{stroke:rgba(255,255,255,.4)}
+body.alarming .fill{stroke:#fff}
+body.alarming .center .big,body.alarming .center .state,
+body.alarming h1,body.alarming p.sub,body.alarming .row,body.alarming .row b{color:#fff}
+body.alarming button.primary{background:#fff;color:var(--alarm)}
+body.alarming .sens,body.alarming .vuwrap,body.alarming .ghost{visibility:hidden}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.55}}
+body.alarming .center .big{animation:flash .7s infinite}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<main>
+  <h1>Hum Catcher</h1>
+  <p class="sub" id="subtitle">Tap start and allow the microphone. Hum — the bar below should jump and the ring should fill.</p>
+
+  <div class="ringwrap">
+    <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+      <circle class="track" cx="50" cy="50" r="44" fill="none" stroke-width="7"/>
+      <circle class="fill" id="fillring" cx="50" cy="50" r="44" fill="none" stroke-width="7"
+              stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46"/>
+    </svg>
+    <div class="center">
+      <div class="big" id="timer">0.0</div>
+      <div class="state" id="state">idle</div>
+    </div>
+  </div>
+
+  <div class="vuwrap">
+    <div class="vulabel"><span>Mic level</span><span id="vutext">off</span></div>
+    <div class="vu"><div id="vubar"></div></div>
+  </div>
+
+  <button class="primary" id="mainbtn">Start listening</button>
+  <button class="ghost" id="testbtn">Test alarm sound</button>
+
+  <div class="row">
+    <span>Caught today <b id="catches">0</b></span>
+    <span>Session <b id="sessioncatches">0</b></span>
+  </div>
+
+  <div class="sens">
+    <label for="sensr"><span>Sensitivity</span><span id="sensval">high</span></label>
+    <input type="range" id="sensr" min="1" max="5" value="4" step="1">
+  </div>
+
+  <p class="note">Short rests between melody notes are fine; the ring only drains during longer silence. Keep this page open, screen on, silent switch off.</p>
+</main>
+
+<script>
+(function(){
+  const CIRC = 276.46, TARGET_MS = 5000, HOLD_MS = 600, RESET_MS = 2500;
+  const $ = id => document.getElementById(id);
+  const fill=$('fillring'), timerEl=$('timer'), stateEl=$('state'), btn=$('mainbtn'),
+        catchesEl=$('catches'), sessEl=$('sessioncatches'), sensr=$('sensr'),
+        sensval=$('sensval'), vubar=$('vubar'), vutext=$('vutext'),
+        subtitle=$('subtitle'), testbtn=$('testbtn');
+  const sensNames={1:'very low',2:'low',3:'medium',4:'high',5:'very high'};
+  // higher sensitivity = lower thresholds. rms = loudness floor, cl = how "tonal" it must be
+  const sensMap={
+    1:{rms:0.020,cl:0.95}, 2:{rms:0.012,cl:0.93}, 3:{rms:0.007,cl:0.91},
+    4:{rms:0.004,cl:0.88}, 5:{rms:0.002,cl:0.85}
+  };
+
+  let audioCtx=null, analyser=null, mediaStream=null, buf=null;
+  let mode='idle', humMs=0, lastFrame=0, lastTonal=0, sessionCatches=0;
+  let alarmTimer=null, wakeLock=null, raf=0;
+
+  function todayKey(){ const d=new Date(); return 'hc-'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+  function readCatches(){ try{ return parseInt(localStorage.getItem(todayKey())||'0',10)||0; }catch(e){ return 0; } }
+  function bumpCatches(){ try{ localStorage.setItem(todayKey(), String(readCatches()+1)); }catch(e){} renderCounts(); }
+  function renderCounts(){ catchesEl.textContent=readCatches(); sessEl.textContent=sessionCatches; }
+  renderCounts();
+  sensr.addEventListener('input', ()=>{ sensval.textContent=sensNames[sensr.value]; });
+  sensval.textContent=sensNames[sensr.value];
+
+  async function getWakeLock(){
+    try{ if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); } }catch(e){}
+  }
+  document.addEventListener('visibilitychange', async ()=>{
+    if(document.visibilityState==='visible' && mode!=='idle'){
+      getWakeLock();
+      try{ if(audioCtx && audioCtx.state==='suspended') await audioCtx.resume(); }catch(e){}
+    }
+  });
+
+  function ensureCtx(){
+    if(!audioCtx){
+      const AC = window.AudioContext||window.webkitAudioContext;
+      audioCtx = new AC();
+    }
+    return audioCtx;
+  }
+
+  function beepOnce(){
+    try{
+      const ctx=ensureCtx();
+      if(ctx.state==='suspended') ctx.resume();
+      const t=ctx.currentTime;
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.type='square'; o.frequency.value=880;
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.5,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t); o.stop(t+0.4);
+    }catch(e){}
+  }
+  testbtn.addEventListener('click', ()=>{
+    beepOnce();
+    subtitle.classList.remove('err');
+    subtitle.textContent='If you heard nothing: turn up the volume and flip the silent (ring) switch off, then test again.';
+  });
+
+  // normalized autocorrelation pitch detector, 65–600 Hz
+  function detect(buffer, sampleRate){
+    const N=buffer.length;
+    let rms=0;
+    for(let i=0;i<N;i++) rms+=buffer[i]*buffer[i];
+    rms=Math.sqrt(rms/N);
+    const s=sensMap[sensr.value];
+    // live level meter
+    const pct=Math.min(100, Math.round(Math.sqrt(rms/0.12)*100));
+    vubar.style.width=pct+'%';
+    vubar.classList.toggle('hot', rms>=s.rms);
+    vutext.textContent = rms>=s.rms ? 'hearing you' : 'quiet';
+    if(rms<s.rms) return null;
+
+    const maxLag=Math.floor(sampleRate/65), minLag=Math.floor(sampleRate/600);
+    const span=N-maxLag;
+    let e0=0; for(let i=0;i<span;i++) e0+=buffer[i]*buffer[i];
+    let bestLag=-1,bestCorr=0;
+    for(let lag=minLag; lag<=maxLag; lag++){
+      let corr=0,e1=0;
+      for(let i=0;i<span;i++){ const b=buffer[i+lag]; corr+=buffer[i]*b; e1+=b*b; }
+      const c=corr/(Math.sqrt(e0*e1)||1);
+      if(c>bestCorr){ bestCorr=c; bestLag=lag; }
+    }
+    if(bestCorr<s.cl||bestLag<0) return null;
+    return sampleRate/bestLag;
+  }
+
+  function loop(ts){
+    if(mode!=='listening') return;
+    raf=requestAnimationFrame(loop);
+    if(!lastFrame) lastFrame=ts;
+    const dt=Math.min(ts-lastFrame,100); lastFrame=ts;
+
+    analyser.getFloatTimeDomainData(buf);
+    const pitch=detect(buf, audioCtx.sampleRate);
+
+    if(pitch){
+      lastTonal=ts;
+      humMs+=dt;
+      stateEl.textContent='humming · '+Math.round(pitch)+' Hz';
+    }else{
+      const gap=ts-lastTonal;
+      if(gap>RESET_MS){ humMs=0; if(stateEl.textContent!=='listening') stateEl.textContent='listening'; }
+      else if(gap>HOLD_MS){
+        humMs=Math.max(0,humMs-dt);
+        if(humMs===0) stateEl.textContent='listening';
+      }
+    }
+    if(humMs>TARGET_MS) humMs=TARGET_MS;
+    timerEl.textContent=(humMs/1000).toFixed(1);
+    fill.style.strokeDashoffset=String(CIRC*(1-humMs/TARGET_MS));
+    if(humMs>=TARGET_MS) startAlarm();
+  }
+
+  function startAlarm(){
+    if(mode==='alarming') return;
+    mode='alarming';
+    cancelAnimationFrame(raf);
+    document.body.classList.add('alarming');
+    stateEl.textContent='you were humming';
+    timerEl.textContent='5.0';
+    btn.textContent='Stop alarm';
+    sessionCatches++; bumpCatches();
+    beepOnce();
+    alarmTimer=setInterval(beepOnce,700);
+  }
+
+  function stopAlarm(){
+    clearInterval(alarmTimer); alarmTimer=null;
+    document.body.classList.remove('alarming');
+    humMs=0; lastFrame=0; lastTonal=0;
+    timerEl.textContent='0.0';
+    fill.style.strokeDashoffset=String(CIRC);
+    mode='listening';
+    stateEl.textContent='listening';
+    btn.textContent='Pause';
+    raf=requestAnimationFrame(loop);
+  }
+
+  function fail(msg){
+    stateEl.textContent='mic unavailable';
+    subtitle.classList.add('err');
+    subtitle.textContent=msg;
+    mode='idle';
+    btn.textContent='Start listening';
+  }
+
+  async function start(){
+    subtitle.classList.remove('err');
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      fail('This viewer can’t open the microphone. Tap the share icon and choose “Open in Safari”, then start there.');
+      return;
+    }
+    try{
+      const ctx=ensureCtx();
+      if(ctx.state==='suspended') await ctx.resume();
+      if(!mediaStream){
+        try{
+          mediaStream=await navigator.mediaDevices.getUserMedia({audio:{
+            echoCancellation:false, noiseSuppression:false, autoGainControl:false
+          }});
+        }catch(e1){
+          if(e1 && (e1.name==='NotAllowedError'||e1.name==='SecurityError')) throw e1;
+          // constraint trouble on some browsers — retry plain
+          mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});
+        }
+        const src=ctx.createMediaStreamSource(mediaStream);
+        analyser=ctx.createAnalyser();
+        analyser.fftSize=2048;
+        buf=new Float32Array(analyser.fftSize);
+        src.connect(analyser);
+      }
+      await getWakeLock();
+      mode='listening'; humMs=0; lastFrame=0; lastTonal=0;
+      stateEl.textContent='listening';
+      subtitle.textContent='Hum a few notes — the bar should say “hearing you” and the ring should fill.';
+      btn.textContent='Pause';
+      raf=requestAnimationFrame(loop);
+    }catch(e){
+      if(e && (e.name==='NotAllowedError'||e.name==='SecurityError')){
+        fail('Microphone blocked. If no permission popup appeared, open this page in Safari itself (share icon → Open in Safari). In Safari: ᴬA in the address bar → Website Settings → Microphone → Allow, then reload.');
+      }else if(e && e.name==='NotFoundError'){
+        fail('No microphone found on this device.');
+      }else{
+        fail('Could not start the microphone ('+(e&&e.name?e.name:'unknown')+'). Reload the page and try again.');
+      }
+    }
+  }
+
+  function pause(){
+    mode='idle';
+    cancelAnimationFrame(raf);
+    humMs=0; lastFrame=0;
+    timerEl.textContent='0.0';
+    fill.style.strokeDashoffset=String(CIRC);
+    stateEl.textContent='paused';
+    vubar.style.width='0%'; vubar.classList.remove('hot'); vutext.textContent='off';
+    btn.textContent='Start listening';
+    try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){}
+  }
+
+  btn.addEventListener('click', ()=>{
+    if(mode==='alarming') stopAlarm();
+    else if(mode==='listening') pause();
+    else start();
+  });
+})();
+</script>
+</body>
+</html>
