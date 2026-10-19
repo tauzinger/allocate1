@@ -133,7 +133,9 @@ body.alarming .center .big{animation:flash .7s infinite}
   </div>
 
   <div class="sens">
-    <label for="sensr"><span>Sensitivity</span><span id="sensval">high</span></label>
+    <label for="trigr"><span>Trigger after</span><span id="trigval">3.0 s</span></label>
+    <input type="range" id="trigr" min="1" max="10" value="3" step="0.5">
+    <label for="sensr" style="margin-top:.6rem"><span>Sensitivity</span><span id="sensval">high</span></label>
     <input type="range" id="sensr" min="1" max="5" value="4" step="1">
   </div>
 
@@ -142,12 +144,14 @@ body.alarming .center .big{animation:flash .7s infinite}
 
 <script>
 (function(){
-  const CIRC = 276.46, TARGET_MS = 5000, HOLD_MS = 600, RESET_MS = 2500;
+  const CIRC = 276.46, HOLD_MS = 600, RESET_MS = 2500;
   const $ = id => document.getElementById(id);
   const fill=$('fillring'), timerEl=$('timer'), stateEl=$('state'), btn=$('mainbtn'),
         catchesEl=$('catches'), sessEl=$('sessioncatches'), sensr=$('sensr'),
         sensval=$('sensval'), vubar=$('vubar'), vutext=$('vutext'),
-        subtitle=$('subtitle'), testbtn=$('testbtn');
+        subtitle=$('subtitle'), testbtn=$('testbtn'),
+        trigr=$('trigr'), trigval=$('trigval');
+  const targetMs=()=>parseFloat(trigr.value)*1000;
   const sensNames={1:'very low',2:'low',3:'medium',4:'high',5:'very high'};
   // higher sensitivity = lower thresholds. rms = loudness floor, cl = how "tonal" it must be
   const sensMap={
@@ -164,8 +168,15 @@ body.alarming .center .big{animation:flash .7s infinite}
   function bumpCatches(){ try{ localStorage.setItem(todayKey(), String(readCatches()+1)); }catch(e){} renderCounts(); }
   function renderCounts(){ catchesEl.textContent=readCatches(); sessEl.textContent=sessionCatches; }
   renderCounts();
-  sensr.addEventListener('input', ()=>{ sensval.textContent=sensNames[sensr.value]; });
+
+  // settings (restored across launches)
+  try{ const v=JSON.parse(localStorage.getItem('hc-set')||'{}'); if(v.s) sensr.value=v.s; if(v.t) trigr.value=v.t; }catch(e){}
+  function saveSettings(){ try{ localStorage.setItem('hc-set', JSON.stringify({s:sensr.value,t:trigr.value})); }catch(e){} }
+  function renderTrig(){ trigval.textContent=parseFloat(trigr.value).toFixed(1)+' s'; }
+  sensr.addEventListener('input', ()=>{ sensval.textContent=sensNames[sensr.value]; saveSettings(); });
+  trigr.addEventListener('input', ()=>{ renderTrig(); saveSettings(); });
   sensval.textContent=sensNames[sensr.value];
+  renderTrig();
 
   async function getWakeLock(){
     try{ if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); } }catch(e){}
@@ -254,10 +265,11 @@ body.alarming .center .big{animation:flash .7s infinite}
         if(humMs===0) stateEl.textContent='listening';
       }
     }
-    if(humMs>TARGET_MS) humMs=TARGET_MS;
+    const T=targetMs();
+    if(humMs>T) humMs=T;
     timerEl.textContent=(humMs/1000).toFixed(1);
-    fill.style.strokeDashoffset=String(CIRC*(1-humMs/TARGET_MS));
-    if(humMs>=TARGET_MS) startAlarm();
+    fill.style.strokeDashoffset=String(CIRC*(1-humMs/T));
+    if(humMs>=T) startAlarm();
   }
 
   function startAlarm(){
@@ -266,7 +278,7 @@ body.alarming .center .big{animation:flash .7s infinite}
     cancelAnimationFrame(raf);
     document.body.classList.add('alarming');
     stateEl.textContent='you were humming';
-    timerEl.textContent='5.0';
+    timerEl.textContent=(targetMs()/1000).toFixed(1);
     btn.textContent='Stop alarm';
     sessionCatches++; bumpCatches();
     beepOnce();
