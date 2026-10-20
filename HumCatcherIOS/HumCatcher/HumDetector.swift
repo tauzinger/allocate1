@@ -15,6 +15,7 @@ final class HumDetector: ObservableObject {
     // settings (bound from UI)
     var triggerSeconds: Double = 3.0
     var sensitivity: Int = 4                  // 1..5
+    var decayRate: Double = 1.0               // 0..3, drain speed during silence
 
     private let holdMs = 600.0
     private let resetMs = 2500.0
@@ -118,7 +119,7 @@ final class HumDetector: ObservableObject {
         } else {
             let gap = now - lastTonal
             if gap > resetMs { humMs = 0 }
-            else if gap > holdMs { humMs = max(0, humMs - dt) }
+            else if gap > holdMs { humMs = max(0, humMs - dt * decayRate) }
         }
         let target = triggerSeconds * 1000.0
         if humMs > target { humMs = target }

@@ -4,6 +4,7 @@ struct ContentView: View {
     @StateObject private var detector = HumDetector()
     @AppStorage("triggerSeconds") private var triggerSeconds = 3.0
     @AppStorage("sensitivity") private var sensitivity = 4.0
+    @AppStorage("decayRate") private var decayRate = 1.0
 
     private let accent = Color(red: 0.31, green: 0.66, blue: 0.55)
     private let alarmColor = Color(red: 0.88, green: 0.41, blue: 0.30)
@@ -71,6 +72,14 @@ struct ContentView: View {
                             .tint(accent)
                             .onChange(of: triggerSeconds) { apply() }
                         HStack {
+                            Text("Decay speed")
+                            Spacer()
+                            Text(String(format: "%.1f×", decayRate)).monospacedDigit()
+                        }.font(.footnote).foregroundStyle(.secondary)
+                        Slider(value: $decayRate, in: 0...3, step: 0.5)
+                            .tint(accent)
+                            .onChange(of: decayRate) { apply() }
+                        HStack {
                             Text("Sensitivity")
                             Spacer()
                             Text(["", "very low", "low", "medium", "high", "very high"][Int(sensitivity)])
@@ -96,5 +105,6 @@ struct ContentView: View {
     private func apply() {
         detector.triggerSeconds = triggerSeconds
         detector.sensitivity = Int(sensitivity)
+        detector.decayRate = decayRate
     }
 }
