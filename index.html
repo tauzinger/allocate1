@@ -135,6 +135,8 @@ body.alarming .center .big{animation:flash .7s infinite}
   <div class="sens">
     <label for="trigr"><span>Trigger after</span><span id="trigval">3.0 s</span></label>
     <input type="range" id="trigr" min="1" max="10" value="3" step="0.5">
+    <label for="decr" style="margin-top:.6rem"><span>Decay speed</span><span id="decval">1.0×</span></label>
+    <input type="range" id="decr" min="0" max="3" value="1" step="0.5">
     <label for="sensr" style="margin-top:.6rem"><span>Sensitivity</span><span id="sensval">high</span></label>
     <input type="range" id="sensr" min="1" max="5" value="4" step="1">
   </div>
@@ -150,8 +152,10 @@ body.alarming .center .big{animation:flash .7s infinite}
         catchesEl=$('catches'), sessEl=$('sessioncatches'), sensr=$('sensr'),
         sensval=$('sensval'), vubar=$('vubar'), vutext=$('vutext'),
         subtitle=$('subtitle'), testbtn=$('testbtn'),
-        trigr=$('trigr'), trigval=$('trigval');
+        trigr=$('trigr'), trigval=$('trigval'),
+        decr=$('decr'), decval=$('decval');
   const targetMs=()=>parseFloat(trigr.value)*1000;
+  const decayRate=()=>parseFloat(decr.value);
   const sensNames={1:'very low',2:'low',3:'medium',4:'high',5:'very high'};
   // higher sensitivity = lower thresholds. rms = loudness floor, cl = how "tonal" it must be
   const sensMap={
@@ -170,13 +174,15 @@ body.alarming .center .big{animation:flash .7s infinite}
   renderCounts();
 
   // settings (restored across launches)
-  try{ const v=JSON.parse(localStorage.getItem('hc-set')||'{}'); if(v.s) sensr.value=v.s; if(v.t) trigr.value=v.t; }catch(e){}
-  function saveSettings(){ try{ localStorage.setItem('hc-set', JSON.stringify({s:sensr.value,t:trigr.value})); }catch(e){} }
+  try{ const v=JSON.parse(localStorage.getItem('hc-set')||'{}'); if(v.s) sensr.value=v.s; if(v.t) trigr.value=v.t; if(v.d!=null) decr.value=v.d; }catch(e){}
+  function saveSettings(){ try{ localStorage.setItem('hc-set', JSON.stringify({s:sensr.value,t:trigr.value,d:decr.value})); }catch(e){} }
   function renderTrig(){ trigval.textContent=parseFloat(trigr.value).toFixed(1)+' s'; }
+  function renderDec(){ decval.textContent=parseFloat(decr.value).toFixed(1)+'×'; }
   sensr.addEventListener('input', ()=>{ sensval.textContent=sensNames[sensr.value]; saveSettings(); });
   trigr.addEventListener('input', ()=>{ renderTrig(); saveSettings(); });
+  decr.addEventListener('input', ()=>{ renderDec(); saveSettings(); });
   sensval.textContent=sensNames[sensr.value];
-  renderTrig();
+  renderTrig(); renderDec();
 
   async function getWakeLock(){
     try{ if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); } }catch(e){}
@@ -261,7 +267,7 @@ body.alarming .center .big{animation:flash .7s infinite}
       const gap=ts-lastTonal;
       if(gap>RESET_MS){ humMs=0; if(stateEl.textContent!=='listening') stateEl.textContent='listening'; }
       else if(gap>HOLD_MS){
-        humMs=Math.max(0,humMs-dt);
+        humMs=Math.max(0,humMs-dt*decayRate());
         if(humMs===0) stateEl.textContent='listening';
       }
     }
